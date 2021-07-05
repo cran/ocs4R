@@ -6,14 +6,14 @@
 \alias{ocs4R-package}
 \title{Interface to 'OCS' REST API}
 \description{
-Provides an Interface to 'OCS' (<http://www.open-collaboration-services.org/>) REST API.
+Provides an Interface to 'OCS' (<https://www.open-collaboration-services.org/>) REST API.
 }
 \details{
 \tabular{ll}{
    Package: \tab ocs4R\cr
    Type: \tab Package\cr
-   Version: \tab 0.1\cr
-   Date: \tab 2020-02-22\cr
+   Version: \tab 0.2\cr
+   Date: \tab 2021-07-05\cr
    License: \tab MIT\cr
    LazyLoad: \tab yes\cr
  }

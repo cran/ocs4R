@@ -4,9 +4,8 @@
 \name{ocsApiWebdavManager}
 \alias{ocsApiWebdavManager}
 \title{ocsApiWebdavManager}
-\format{\code{\link{R6Class}} object.}
-\usage{
-ocsApiWebdavManager
+\format{
+\code{\link{R6Class}} object.
 }
 \value{
 Object of \code{\link{R6Class}} for modelling an ocsManager for Webdav API
@@ -52,8 +51,14 @@ ocsApiWebdavManager
    (eg \code{newfolder1/newfolder2/newfolder3}), the function will create recursively as 
    many collections are handled in the name. 
  }
- \item{\code{uploadFile(filename, relPath)}}{
+ \item{\code{uploadFile(filename, relPath, delete_if_existing)}}{
    WebDAV method to upload a file. By default \code{relPath} is set to \code{"/"} (root).
+ }
+ \item{\code{deleteFile(filename, relPath)}}{
+   WebDAV method to delete a file. By default \code{relPath} is set to \code{"/"} (root).
+ }
+ \item{\code{getPublicFile(share_token)}}{
+   Get details of a shared public file given its share token
  }
 }
 }

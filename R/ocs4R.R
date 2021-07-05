@@ -23,16 +23,17 @@
 #' @importFrom httr handle
 #' @import jsonlite
 #' @import XML
+#' @import keyring
 #' 
 #' @title Interface to 'OCS' REST API
-#' @description Provides an Interface to 'OCS' (<http://www.open-collaboration-services.org/>) REST API.
+#' @description Provides an Interface to 'OCS' (<https://www.open-collaboration-services.org/>) REST API.
 #'
 #' @details
 #'  \tabular{ll}{
 #'    Package: \tab ocs4R\cr
 #'    Type: \tab Package\cr
-#'    Version: \tab 0.1\cr
-#'    Date: \tab 2020-02-22\cr
+#'    Version: \tab 0.2\cr
+#'    Date: \tab 2021-07-05\cr
 #'    License: \tab MIT\cr
 #'    LazyLoad: \tab yes\cr
 #'  }

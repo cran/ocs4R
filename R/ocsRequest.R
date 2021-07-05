@@ -8,7 +8,7 @@
 #'
 #' @section Methods:
 #' \describe{
-#'  \item{\code{new(type, url, request, user, pwd, logger)}}{
+#'  \item{\code{new(type, url, request, user, logger)}}{
 #'    This method is used to instantiate a object for doing an 'ocs' web-service request
 #'  }
 #'  \item{\code{getRequest()}}{
@@ -57,6 +57,8 @@ ocsRequest <- R6Class("ocsRequest",
     auth = NA,
     token = NULL,
     cookies = NULL,
+    
+    keyring_service = NULL,
     
     getUserAgent = function(){
       return(paste("ocs4R", packageVersion("ocs4R"), sep="-"))
@@ -293,17 +295,19 @@ ocsRequest <- R6Class("ocsRequest",
     },
     
     #WEBDAV_PROPFIND
-    WEBDAV_PROPFIND = function(url, request){
+    WEBDAV_PROPFIND = function(url, request, anonymous = FALSE){
       req <- paste(url, request, sep = "/")
       
       self$INFO(sprintf("WEBDAV/PROPFIND - Listing files at '%s'", req))
       
       h <- new_handle()
       handle_setopt(h, customrequest = "PROPFIND")
-      headers <- list("OCS-APIRequest" = "true", "Authorization" = private$auth)
-      if(!is.null(private$token)) headers <- c(headers, "X-XSRF-TOKEN" = private$token)
-      if(!is.null(private$cookies)) headers <- c(headers, "Set-Cookie" = private$cookies)
-      handle_setheaders(h, .list = headers)
+      if(!anonymous){
+        headers <- list("OCS-APIRequest" = "true", "Authorization" = private$auth)
+        if(!is.null(private$token)) headers <- c(headers, "X-XSRF-TOKEN" = private$token)
+        if(!is.null(private$cookies)) headers <- c(headers, "Set-Cookie" = private$cookies)
+        handle_setheaders(h, .list = headers)
+      }
       response <- curl_fetch_memory(req, h)
       xml <- rawToChar(response$content)
       response <- xmlParse(xml, asText = TRUE)
@@ -322,6 +326,11 @@ ocsRequest <- R6Class("ocsRequest",
         out_node <- data.frame(
           name = sub(base, "", URLdecode(xpathSApply(xmlDoc(node), "//d:href", namespaces = webdavNS, xmlValue))),
           resourceType = ifelse(length(xmlChildren(getNodeSet(xmlDoc(node), "//d:propstat/d:prop/d:resourcetype", namespaces = webdavNS)[[1]]))==0,"file","collection"),
+          contentLength = {
+            ct <- xpathSApply(xmlDoc(node), "//d:propstat/d:prop/d:getcontentlength", namespaces = webdavNS, xmlValue)
+            if(length(ct)==0) ct <- NA
+            ct
+          },
           contentType = {
             ct <- xpathSApply(xmlDoc(node), "//d:propstat/d:prop/d:getcontenttype", namespaces = webdavNS, xmlValue)
             if(length(ct)==0) ct <- NA
@@ -330,7 +339,7 @@ ocsRequest <- R6Class("ocsRequest",
           size = {
             s = xpathSApply(xmlDoc(node), "//d:propstat/d:prop/d:getcontentlength", namespaces = webdavNS, xmlValue)
             s = as.numeric(s)
-            s <- if(length(s)==0) NA else s/1048576
+            if(length(s)==0) s <- NA
             s
           },
           quota = {
@@ -345,6 +354,7 @@ ocsRequest <- R6Class("ocsRequest",
             lctime <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
             date <- strptime(date, "%a, %d %b %Y %H:%M:%S")
             Sys.setlocale("LC_TIME", lctime)
+            if(length(date)==0) date <- NA
             date
           },
           stringsAsFactors = FALSE
@@ -352,6 +362,7 @@ ocsRequest <- R6Class("ocsRequest",
         return(out_node)
       }))
       result <- result[result$name != "", ]
+      result$lastModified <- as.POSIXlt(result$lastModified, origin = "1970-01-01")
       
       response <- list(request = req, requestHeaders = NA,
                        status = NA, response = result)
@@ -387,7 +398,7 @@ ocsRequest <- R6Class("ocsRequest",
   public = list(
     #initialize
     initialize = function(type, url, request,
-                          user = NULL, pwd = NULL,
+                          user = NULL,
                           token = NULL, cookies = NULL,
                           namedParams = list(),
                           content = NULL, contentType = "text/plain", 
@@ -396,6 +407,7 @@ ocsRequest <- R6Class("ocsRequest",
       super$initialize(logger = logger)
       private$type = type
       private$url = url
+      private$keyring_service <- paste0("ocs4R@", url)
       private$request = request
       private$namedParams = namedParams
       private$namedParams$format = "json"
@@ -405,10 +417,13 @@ ocsRequest <- R6Class("ocsRequest",
       private$filename = filename
       
       #authentication schemes
-      if(!is.null(user) && !is.null(pwd)){
+      if(!is.null(user)){
         #Basic authentication (user/pwd) scheme
         private$auth_scheme <- "Basic"
-        private$auth <- paste(private$auth_scheme, openssl::base64_encode(paste(user, pwd,sep=":")))
+        private$auth <- paste(
+          private$auth_scheme, 
+          openssl::base64_encode(paste(user, keyring::key_get(service = private$keyring_service, username = user),sep=":"))
+        )
       }
       private$token <- token
       private$cookies <- cookies
@@ -422,7 +437,7 @@ ocsRequest <- R6Class("ocsRequest",
         "HTTP_POST" = private$HTTP_POST(private$url, private$request, private$namedParams, private$content, private$contentType),
         "HTTP_PUT" = private$HTTP_PUT(private$url, private$request, private$namedParams, private$content, private$contentType, private$filename),
         "HTTP_DELETE" = private$HTTP_DELETE(private$url, private$request, private$content, private$contentType),
-        "WEBDAV_PROPFIND" = private$WEBDAV_PROPFIND(private$url, private$request),
+        "WEBDAV_PROPFIND" = private$WEBDAV_PROPFIND(private$url, private$request, anonymous = is.null(private$user)&is.null(private$token)&is.null(private$cookies)),
         "WEBDAV_MKCOL" = private$WEBDAV_MKCOL(private$url, private$request)
       )
       
