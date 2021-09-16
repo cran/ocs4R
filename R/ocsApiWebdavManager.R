@@ -6,11 +6,15 @@
 #' @format \code{\link{R6Class}} object.
 #' @section General Methods (inherited from 'ocsManager'):
 #' \describe{
-#'  \item{\code{new(url, user, pwd, logger)}}{
+#'  \item{\code{new(url, user, pwd, logger, keyring_backend)}}{
 #'    This method is used to instantiate an ocsApiWebdavManager. The user/pwd are
-#'    mandatory in order to connect to 'ocs'. The logger can be either
-#'    NULL, "INFO" (with minimum logs), or "DEBUG" (for complete curl 
-#'    http calls logs)
+#'    mandatory in order to connect to 'ocs'. 
+#'    
+#'    The logger can be either NULL, "INFO" (with minimum logs), or "DEBUG" 
+#'    (for complete curl http calls logs).
+#'    
+#'    The \code{keyring_backend} can be set to use a different backend for storing 
+#'    the user password with \pkg{keyring} (Default value is 'env').
 #'  }
 #'  \item{\code{connect()}}{
 #'    A method to connect to 'ocs' and set version/capabilities
@@ -55,8 +59,9 @@
 ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
   inherit = ocsManager,
   public = list(
-    initialize = function(url, user, pwd, logger = NULL){
-      super$initialize(url, user, pwd, logger)
+    initialize = function(url, user, pwd, logger = NULL,
+                          keyring_backend = 'env'){
+      super$initialize(url, user, pwd, logger, keyring_backend)
     },
     
     #OCS WEBDAV API
@@ -73,7 +78,8 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
       request <- paste0(self$getWebdavRoot(), relPath)
       list_req <- ocsRequest$new(
         type = "WEBDAV_PROPFIND", private$url, request,
-        private$user, private$pwd, token = private$token, cookies = private$cookies,
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
       list_req$execute()
@@ -88,7 +94,8 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
         request <- paste0(self$getWebdavRoot(), relPath, name)
         mkcol_req <- ocsRequest$new(
           type = "WEBDAV_MKCOL", private$url, request,
-          private$user, private$pwd, token = private$token, cookies = private$cookies,
+          private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+          token = private$getToken(), cookies = private$cookies,
           logger = self$loggerType
         )
         mkcol_req$execute()
@@ -118,7 +125,8 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
                         filename, paste(private$url, request, sep="/")))
       upload_req <- ocsRequest$new(
         type = "HTTP_PUT", private$url, request,
-        private$user, private$pwd, token = private$token, cookies = private$cookies,
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
         filename = filename,
         logger = self$loggerType
       )
@@ -145,7 +153,8 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
                         filename, paste(private$url, request, sep="/")))
       upload_req <- ocsRequest$new(
         type = "HTTP_DELETE", private$url, request,
-        private$user, private$pwd, token = private$token, cookies = private$cookies,
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
         filename = filename,
         logger = self$loggerType
       )

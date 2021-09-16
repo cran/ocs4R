@@ -6,11 +6,15 @@
 #' @format \code{\link{R6Class}} object.
 #' @section General Methods (inherited from 'ocsManager'):
 #' \describe{
-#'  \item{\code{new(url, user, pwd, logger)}}{
+#'  \item{\code{new(url, user, pwd, logger, keyring_backend)}}{
 #'    This method is used to instantiate an ocsApiSharingManager. The user/pwd are
-#'    mandatory in order to connect to 'ocs'. The logger can be either
-#'    NULL, "INFO" (with minimum logs), or "DEBUG" (for complete curl 
-#'    http calls logs)
+#'    mandatory in order to connect to 'ocs'. 
+#'    
+#'    The logger can be either NULL, "INFO" (with minimum logs), or "DEBUG" 
+#'    (for complete curl http calls logs).
+#'    
+#'    The \code{keyring_backend} can be set to use a different backend for storing 
+#'    the user password with \pkg{keyring} (Default value is 'env').
 #'  }
 #'  \item{\code{connect()}}{
 #'    A method to connect to 'ocs' and set version/capabilities
@@ -60,8 +64,9 @@ ocsApiSharingManager <-  R6Class("ocsApiSharingManager",
   inherit = ocsManager,
   public = list(
     
-    initialize = function(url, user, pwd, logger = NULL){
-      super$initialize(url, user, pwd, logger)
+    initialize = function(url, user, pwd, logger = NULL,
+                          keyring_backend = 'env'){
+      super$initialize(url, user, pwd, logger, keyring_backend)
     },
     
     #OCS SHARING API
@@ -85,7 +90,8 @@ ocsApiSharingManager <-  R6Class("ocsApiSharingManager",
       request <- "ocs/v1.php/apps/files_sharing/api/v1/shares"
       get_req <- ocsRequest$new(
         type = "HTTP_GET", private$url, request,
-        private$user, private$pwd, token = private$token, cookies = private$cookies,
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
         namedParams = list(
           path = path,
           reshares = reshares,
@@ -174,7 +180,8 @@ ocsApiSharingManager <-  R6Class("ocsApiSharingManager",
       request <- "ocs/v1.php/apps/files_sharing/api/v1/shares"
       post_req <- ocsRequest$new(
         type = "HTTP_POST", private$url, request,
-        private$user, private$pwd, token = private$token, cookies = private$cookies,
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
         namedParams = list(
           name = name,
           path = path,
