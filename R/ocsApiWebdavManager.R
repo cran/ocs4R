@@ -90,6 +90,8 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
     #makeCollection
     makeCollection = function(name, relPath = "/"){
       col_names <- unlist(strsplit(name, "/"))
+      if(!startsWith(relPath, "/")) relPath <- paste0("/", relPath)
+      if(!endsWith(relPath, "/")) relPath <- paste0(relPath, "/")
       if(length(col_names)==1){
         request <- paste0(self$getWebdavRoot(), relPath, name)
         mkcol_req <- ocsRequest$new(
@@ -104,9 +106,13 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
       }else{
         self$INFO(sprintf("Nested collections detected in '%s'. Splitting name to make nested collections", name))
         for(i in 1:length(col_names)){
-          newRelPath <- "/"
+          newRelPath <- relPath
           if(i>1) newRelPath <- paste0(newRelPath, paste(col_names[1:(i-1)], collapse="/"), "/")
-          self$makeCollection(col_names[i], newRelPath)
+          print(col_names[i])
+          print(newRelPath)
+          if(!paste0(col_names[i],"/") %in% self$listFiles(relPath = newRelPath)$name) {
+            self$makeCollection(col_names[i], newRelPath)
+          }
         }
       }
     },
@@ -131,7 +137,7 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
         logger = self$loggerType
       )
       upload_req$execute()
-      if(upload_req$getStatus()==201){
+      if(upload_req$getStatus() %in% c(201, 204)){
         self$INFO(sprintf("Successfuly uploaded file '%s' at '%s'",
                           filename, paste(private$url, request, sep="/")))
       }else{
@@ -172,6 +178,20 @@ ocsApiWebdavManager <-  R6Class("ocsApiWebdavManager",
       return(upload_resp)
     },
     
+    #downloadFile
+    downloadFile = function(relPath, filename, outdir = "."){
+      request <- sprintf("remote.php/dav/files/%s/%s/%s", private$user, relPath, filename)
+      file_req <- ocsRequest$new(
+        type = "HTTP_GET", private$url, request, format = NULL, namedParams = list(),
+        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        token = private$getToken(), cookies = private$cookies,
+        logger = self$loggerType
+      )
+      file_req$execute()
+      file_resp <- file_req$getResponse()
+      writeBin(object = file_resp, con = file.path(outdir, filename))
+      return(file.path(outdir, filename))
+    },
     
     #getPublicFile
     getPublicFile = function(share_token){
