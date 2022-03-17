@@ -1,6 +1,6 @@
 Package: ocs4R
-Version: 0.2-2
-Date: 2021-11-01
+Version: 0.2-3
+Date: 2022-03-17
 Title: Interface to Open Collaboration Services (OCS) REST API
 Authors@R: c(
   person("Emmanuel", "Blondel", role = c("aut", "cre"), email = "emmanuel.blondel1@gmail.com", comment = c(ORCID = "0000-0002-5870-5762")))
@@ -15,7 +15,7 @@ BugReports: https://github.com/eblondel/ocs4R/issues
 LazyLoad: yes
 RoxygenNote: 7.1.0
 NeedsCompilation: no
-Packaged: 2021-11-01 07:12:54 UTC; manub
+Packaged: 2022-03-17 19:23:28 UTC; manub
 Author: Emmanuel Blondel [aut, cre] (<https://orcid.org/0000-0002-5870-5762>)
 Repository: CRAN
-Date/Publication: 2021-11-01 07:30:02 UTC
+Date/Publication: 2022-03-17 19:40:03 UTC
