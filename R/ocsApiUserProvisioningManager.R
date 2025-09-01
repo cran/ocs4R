@@ -2,102 +2,21 @@
 #' @docType class
 #' @export
 #' @keywords ocs manager userprovisioning api
-#' @return Object of \code{\link{R6Class}} for modelling an ocsManager for Webdav API
-#' @format \code{\link{R6Class}} object.
-#' @section General Methods (inherited from 'ocsManager'):
-#' \describe{
-#'  \item{\code{new(url, user, pwd, logger, keyring_backend)}}{
-#'    This method is used to instantiate an ocsApiUserProvisioningManager. The user/pwd are
-#'    mandatory in order to connect to 'ocs' 
-#'    
-#'    The logger can be either NULL, "INFO" (with minimum logs), or "DEBUG" 
-#'    (for complete curl http calls logs).
-#'    
-#'    The \code{keyring_backend} can be set to use a different backend for storing 
-#'    the user password with \pkg{keyring} (Default value is 'env').
-#'  }
-#'  \item{\code{connect()}}{
-#'    A method to connect to 'ocs' and set version/capabilities
-#'  }
-#'  \item{\code{getVersion()}}{
-#'    Get the 'ocs' server version
-#'  }
-#'  \item{\code{getCapabilities()}}{
-#'    Get the 'ocs' server capabilities
-#'  }
-#' }
-#'
-#' @section User Provisioning API methods:
-#' \describe{
-#'  \item{\code{addUser(userid, email, password, groups)}}{
-#'    Adds a user given a \code{userid} (required). All other fields (email, password, groups) are
-#'    optional for the user creation. Returns \code{TRUE} if the user is added, \code{FALSE} otherwise.
-#'  }
-#'  \item{\code{getUsers()}}{
-#'    Get the list of users. This method returns a vector of class 'character' giving
-#'    the user IDs available in the OCS cloud plateform.
-#'  }
-#'  \item{\code{getUser(userid, pretty)}}{
-#'    Get the user details from its \code{userid}. If the argument \code{pretty} is set to TRUE,
-#'    this will return an object of class \code{data.frame}, otherwise (by default) it returns 
-#'    an object of class \code{list}.
-#'  }
-#'  \item{\code{editUser(userid, key, value)}}{
-#'    Edits a user, identifier by a userid. The user property to be edited should be set using its
-#'    key (eg display) and the value to be modified for this key. Returns \code{TRUE} if the user 
-#'    is edited, \code{FALSE} otherwise.
-#'  }
-#'  \item{\code{editUserDisplayName(userid, displayName)}}{
-#'    Edits a user display name.
-#'  }
-#'  \item{\code{editUserEmail(userid, email)}}{
-#'    Edits a user email.
-#'  }
-#'  \item{\code{editUserPassword(userid, password)}}{
-#'    Edits a user password.
-#'  }
-#'  \item{\code{editUserQuota(userid, quota)}}{
-#'    Edits a user quota.
-#'  }
-#'  \item{\code{enableUser(userid)}}{
-#'    Enables a user. Returns \code{TRUE} if enabled.
-#'  }
-#'  \item{\code{disableUser(userid)}}{
-#'    Disables a user. Returns \code{TRUE} if disabled.
-#'  }
-#'  \item{\code{deleteUser(userid)}}{
-#'    Deletes a user. Returns \code{TRUE} if deleted.
-#'  }
-#'  \item{\code{getUserGroups(userid)}}{
-#'    Get user group(s). This method returns a vector of class 'character' giving
-#'    the usergroups IDs
-#'  }
-#'  \item{code{addToGroup(userid, groupid)}}{
-#'    Adds a user to a group.
-#'  }
-#'  \item{\code{removeFromGroup(userid, groupid)}}{
-#'    Removes a user from a group.
-#'  }
-#'  \item{\code{getGroups(search, limit, offset)}}{
-#'    Get the list of groups. This method returns a vector of class 'character' giving
-#'    the usergroups IDs
-#'  }
-#'  \item{\code{getGroup(groupid)}}{
-#'    Get the group including member users from its \code{groupid}.
-#'  }
-#'  \item{\code{addGroup(groupid)}}{
-#'    Add group given a \code{groupid} (required).
-#'  }
-#'  \item{\code{deleteGroup(groupid)}}{
-#'    Deletes a group. Returns \code{TRUE} if deleted.
-#'  }
-#' }
+#' @return Object of \code{\link[R6]{R6Class}} for modelling an ocsManager for Webdav API
+#' @format \code{\link[R6]{R6Class}} object.
 #' 
 #' @author Emmanuel Blondel <emmanuel.blondel1@@gmail.com>
 #' 
 ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
   inherit = ocsManager,
   public = list(
+    
+    #'@description Initialize manager
+    #'@param url url
+    #'@param user user
+    #'@param pwd pwd
+    #'@param logger logger
+    #'@param keyring_backend backend to use with \pkg{keyring}. Default is \code{NULL}
     initialize = function(url, user, pwd, logger = NULL,
                           keyring_backend = 'env'){
       super$initialize(url, user, pwd, logger, keyring_backend)
@@ -109,12 +28,17 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
     #Instruction set for users
     #-------------------------------------------------------------------------------------------
     
-    #addUser
+    #'@description Adds a user given a \code{userid} (required). All other fields (email, password, groups) are
+    #'    optional for the user creation. Returns \code{TRUE} if the user is added, \code{FALSE} otherwise.
+    #'@param userid user ID
+    #'@param email email
+    #'@param password user password
+    #'@param groups groups
     addUser = function(userid, email = NULL, password = NULL, groups = NULL){
       request <- "ocs/v1.php/cloud/users"
       post_req <- ocs4R::ocsRequest$new(
         type = "HTTP_POST", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = list(
           userid = userid,
@@ -131,11 +55,12 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(added)
     },
     
-    #getUsers
+    #'@description Get the list of users. This method returns a vector of class 'character' giving 
+    #'the user IDs available in the OCS cloud plateform.
     getUsers = function(){
       get_users <- ocs4R::ocsRequest$new(
         type = "HTTP_GET", private$url, "ocs/v1.php/cloud/users",
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")),
+        private$user, pwd = private$getPassword(),
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -145,11 +70,15 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(users)
     },
     
-    #getUser
+    #'@description Get the user details from its \code{userid}. If the argument \code{pretty} is set to TRUE,
+    #'    this will return an object of class \code{data.frame}, otherwise (by default) it returns 
+    #'    an object of class \code{list}.
+    #'@param userid user ID
+    #'@param pretty pretty
     getUser = function(userid, pretty = FALSE){
       get_user <- ocs4R::ocsRequest$new(
         type = "HTTP_GET", private$url, sprintf("ocs/v1.php/cloud/users/%s", userid),
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -165,7 +94,12 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(user)
     },
     
-    #editUser
+    #'@description Edits a user, identifier by a userid. The user property to be edited should be set using its
+    #'    key (eg display) and the value to be modified for this key. Returns \code{TRUE} if the user 
+    #'    is edited, \code{FALSE} otherwise.
+    #'@param userid user ID
+    #'@param key key
+    #'@param value value
     editUser = function(userid, key, value){
       allowedKeys <- c("email", "quota", "display", "password")
       if(!key %in% allowedKeys){
@@ -176,7 +110,7 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       request <- sprintf("ocs/v1.php/cloud/users/%s", userid)
       put_req <- ocsRequest$new(
         type = "HTTP_PUT", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = list(key = key, value = value),
         logger = self$loggerType
@@ -190,32 +124,42 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(edited)
     },
     
-    #editUserDisplayName
+    #'@description Edits a user display name.
+    #'@param userid user ID
+    #'@param displayName display name
     editUserDisplayName = function(userid, displayName){
       return(self$editUser(userid, key = "display", value = displayName))
     },
     
-    #editUserEmail
+    #'@description Edits a user email
+    #'@param userid user ID
+    #'@param email email
     editUserEmail = function(userid, email){
       return(self$editUser(userid, key = "email", value = email))
     },
     
-    #editUserPassword
+    #'@description Edits a user password
+    #'@param userid user ID
+    #'@param password password
     editUserPassword = function(userid, password){
       return(self$editUser(userid, key = "password", value = password))
     },
     
-    #editUserQuota
+    #'@description Edits a user quota
+    #'@param userid user ID
+    #'@param quota quota
     editUserQuota = function(userid, quota){
       return(self$editUser(userid, key = "quota", value = quota))
     },
     
-    #enableUser
+    #'@description Enables a user
+    #'@param userid user ID
+    #'@return \code{TRUE} if enabled, \code{FALSE} otherwise
     enableUser = function(userid){
       request <- sprintf("ocs/v1.php/cloud/users/%s/enable", userid)
       put_req <- ocsRequest$new(
         type = "HTTP_PUT", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = "",
         logger = self$loggerType
@@ -224,12 +168,14 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(TRUE)
     },
     
-    #disableUser
+    #'@description Disables a user
+    #'@param userid user ID
+    #'@return \code{TRUE} if disabled, \code{FALSE} otherwise
     disableUser = function(userid){
       request <- sprintf("ocs/v1.php/cloud/users/%s/disable", userid)
       put_req <- ocsRequest$new(
         type = "HTTP_PUT", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = "",
         logger = self$loggerType
@@ -238,12 +184,14 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(TRUE)
     },
     
-    #deleteUser
+    #'@description Deletes a user
+    #'@param userid user ID
+    #'@return \code{TRUE} if deleted, \code{FALSE} otherwise
     deleteUser = function(userid){
       request <- sprintf("ocs/v1.php/cloud/users/%s", userid)
       delete_req <- ocsRequest$new(
         type = "HTTP_DELETE", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -251,11 +199,13 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(TRUE)
     },
     
-    #getUserGroups
+    #'@description Get user groups
+    #'@param userid user ID
+    #'@return the user groups
     getUserGroups = function(userid){
       get_usergroups <- ocs4R::ocsRequest$new(
         type = "HTTP_GET", private$url, sprintf("ocs/v1.php/cloud/users/%s/groups", userid),
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -265,12 +215,15 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(usergroups)
     },
     
-    #addToGroup
+    #'@description Adds a user to a group.
+    #'@param userid user ID
+    #'@param groupid group ID
+    #'@return \code{TRUE} if added, \code{FALSE} otherwise
     addToGroup = function(userid, groupid){
       request <- sprintf("ocs/v1.php/cloud/users/%s/groups", userid)
       post_req <- ocs4R::ocsRequest$new(
         type = "HTTP_POST", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = list(groupid = groupid),
         contentType = NULL,
@@ -282,12 +235,15 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(added)
     },
     
-    #removeFromGroup
+    #'@description Removes a user from a group.
+    #'@param userid user ID
+    #'@param groupid group ID
+    #'@return \code{TRUE} if removed, \code{FALSE} otherwise
     removeFromGroup = function(userid, groupid){
       request <- sprintf("ocs/v1.php/cloud/users/%s/groups", userid)
       delete_req <- ocsRequest$new(
         type = "HTTP_DELETE", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = list(groupid = groupid),
         logger = self$loggerType
@@ -296,17 +252,17 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(TRUE)
     },
     
-    #createSubadmin
+    #'@description Creates a subadmin
     createSubadmin = function(){
       stop("'createSubadmin' method not yet implemented")
     },
     
-    #removeSubadmin
+    #'@description Removes a subadmin
     removeSubadmin = function(){
       stop("'removeSubadmin' method not yet implemented")
     },
     
-    #getSubadminGroups
+    #'@description Get subadmin groups
     getSubadminGroups = function(){
       stop("'getSubadminGroups' method not yet implemented")
     },
@@ -314,11 +270,15 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
     #Instruction set for groups 
     #-------------------------------------------------------------------------------------------
     
-    #getGroups
+    #'@description Get the list of groups. This method returns a vector of class 
+    #''character' giving the usergroups IDs
+    #'@param search search
+    #'@param limit limit
+    #'@param offset offset
     getGroups = function(search = NULL, limit = NULL, offset = NULL){
       get_groups <- ocs4R::ocsRequest$new(
         type = "HTTP_GET", private$url, "ocs/v1.php/cloud/groups",
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         namedParams = list(search = search, limit = limit, offset = offset),
         logger = self$loggerType
@@ -329,12 +289,14 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(groups)
     },
     
-    #addGroup
+    #'@description Adds a group
+    #'@param groupid group ID
+    #'@return \code{TRUE} if added, \code{FALSE}
     addGroup = function(groupid){
       request <- "ocs/v1.php/cloud/groups"
       post_req <- ocs4R::ocsRequest$new(
         type = "HTTP_POST", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         content = list(groupid = groupid),
         contentType = NULL,
@@ -346,11 +308,13 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(added)
     },
     
-    #getGroup
+    #'@description Gets a group
+    #'@param groupid group ID
+    #'@return the group as \code{list} including the group ID and the list of users
     getGroup = function(groupid){
       get_group <- ocs4R::ocsRequest$new(
         type = "HTTP_GET", private$url, sprintf("ocs/v1.php/cloud/groups/%s", groupid),
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -360,12 +324,14 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(group)
     },
     
-    #deleteGroup
+    #'@description Deletes a group
+    #'@param groupid group ID
+    #'@return \code{TRUE} if deleted, \code{FALSE}
     deleteGroup = function(groupid){
       request <- sprintf("ocs/v1.php/cloud/groups/%s", groupid)
       delete_req <- ocsRequest$new(
         type = "HTTP_DELETE", private$url, request,
-        private$user, pwd = private$keyring_backend$get(service = private$keyring_service, username = paste0(private$user,"_pwd")), 
+        private$user, pwd = private$getPassword(), 
         token = private$getToken(), cookies = private$cookies,
         logger = self$loggerType
       )
@@ -373,7 +339,7 @@ ocsApiUserProvisioningManager <-  R6Class("ocsApiUserProvisioningManager",
       return(TRUE)
     },
     
-    #getSubadmins
+    #'@description Get subadmins
     getSubadmins = function(){
       stop("'getSubadmins' method not yet implemented")
     }
